@@ -32,29 +32,31 @@ module AddSub(
     
     wire [7:0] expA = A[30:23];
     wire [7:0] expB = B[30:23];
+    wire signA;
+    wire signB;
+    reg [7:0] finalExponent;
     wire [23:0] mantissaA = {1'b1,A[22:0]};
     wire [23:0] mantissaB = {1'b1,B[22:0]};
     reg [7:0] difference;
-    reg [280:0] shiftedA;
-    reg [280:0] shiftedB;
-    reg [280:0] ans; 
-    reg bitShiftA; // If exponent of A is larger than that of B, this is high
-    
+    reg [23:0] shiftedA;
+    reg [23:0] shiftedB;
+    reg [32:0] ans; 
+    reg largeA; // If exponent of A is larger than that of B, this is high
     // Extract info about exponents
     always @ * begin
         if (expA > expB)
         begin
             difference <= expA - expB;
-            bitShiftA  <= 1'b1;
+            largeA  <= 1'b1;
         end
         else if (expB > expA)
         begin
             difference <= expB - expA;
-            bitShiftA <= 1'b0;
+            largeA <= 1'b0;
         end
         else begin
             difference <= 8'b0;
-            bitShiftA <= 1'b0;
+            largeA <= 1'b0;
         end
     end
     
@@ -66,18 +68,21 @@ module AddSub(
             C <= 32'b0;
         end
         else
-            if (bitShiftA)
+            if (largeA)
             begin
-                shiftedA  = mantissaA  << difference;
-                shiftedB = mantissaB;
-                ans = shiftedA + mantissaB;
+                shiftedB  <= mantissaB  >> difference;
+                shiftedA <= mantissaA;
+                ans <= shiftedA + shiftedB;
+                finalExponent <= expA;
             end
             else
             begin
-                shiftedB = mantissaB << difference;
-                shiftedA = mantissaA ;
-                ans = shiftedB + mantissaA;
+                shiftedB <= mantissaB >> difference;
+                shiftedA <= mantissaA ;
+                ans <= shiftedB + shiftedA;
+                finalExponent <= expB;
             end
+            C <= {0,finalExponent, ans[22:0]};
     end
     
 endmodule
