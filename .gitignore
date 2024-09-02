@@ -1,3 +1,6 @@
 
 db/FPU.quiproj.10312.rdr.flock
 db/FPU.db_info
+/output_files
+/db
+/incremental_db

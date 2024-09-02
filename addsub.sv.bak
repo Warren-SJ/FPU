@@ -21,7 +21,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module addsub(
+module AddSub(
     input [31:0] A,
     input [31:0] B,
     input operation, // 0 for addition, 1 for subtraction
@@ -44,7 +44,7 @@ module addsub(
     reg largeA; // If exponent of A is larger than that of B, this is high
     reg requiredoperation;
     reg [5:0] index;
-    reg signResult;
+
 
     // Extract info about operands and operators
     always @ * begin
@@ -79,26 +79,20 @@ module addsub(
                     shiftedB  <= mantissaB  >> difference;
                     shiftedA <= mantissaA;
                     finalExponent <= expA;
-						  signResult <=signA;
                 end
             else
                 begin
                     shiftedA <= mantissaA >> difference;
                     shiftedB <= mantissaB ;
                     finalExponent <= expB;
-						  signResult <= signB;
                 end
         if (!requiredoperation)
             begin
-                ans <= shiftedA + shiftedB;
-				signResult <= signA;
-			end else begin
-				ans <= - shiftedA - shiftedB;
-				if (shiftedA < shiftedB) 
-				    begin
-                        signResult <= !signResult;
-                    ans <= -ans;
-                    end
+                if (!signA)
+                    ans <= shiftedA + shiftedB;
+                else
+                    ans <= - shiftedA + shiftedB;
+            end
         else
             begin
                 if (!signA)
@@ -106,7 +100,6 @@ module addsub(
                 else
                     ans <= - shiftedA - shiftedB;
             end
-		end
         casex (ans)
             24'b1??????????????????????? : index <= 5'd23;
             24'b01?????????????????????? : index <= 5'd22;
@@ -137,9 +130,8 @@ module addsub(
                 index <= 5'd0;
             end
         endcase
-        ans <= ans >> index;
-        finalExponent <= finalExponent + index;
-        C <= {signResult,finalExponent, ans[22:0]};
+        ans <= ans >> (24-index);
+        C <= {signA ^ signB,finalExponent, ans[22:0]};
     end
 
 endmodule
