@@ -4,3 +4,4 @@ db/FPU.db_info
 /output_files
 /db
 /incremental_db
+*.bak
