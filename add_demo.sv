@@ -48,8 +48,8 @@ module add_demo(
             operation <= 1'b0;
         end
         else begin
-            A <= 32'h40600000; // 3.5 in IEEE 754 single-precision format
-            B <= 32'h3FA00000; // 1.25 in IEEE 754 single-precision format
+            A <= 32'h40625000; // 3.5 in IEEE 754 single-precision format
+            B <= 32'h3FA03200; // 1.25 in IEEE 754 single-precision format
             operation <= 1'b0; // 0 for addition, 1 for subtraction
         end
     end

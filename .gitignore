@@ -5,3 +5,4 @@ db/FPU.db_info
 /db
 /incremental_db
 *.bak
+/simulation
