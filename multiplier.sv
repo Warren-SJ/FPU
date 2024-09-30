@@ -93,7 +93,7 @@ module multiplier(
             end
 
             // Handle the result based on exponent range
-            if (Tmp_Exp < -132) begin
+            if (Tmp_Exp < -149) begin
                 // Too small, underflow to zero
                 Tmp <= {Sign, {31{1'b0}}};
                 zero <= 1;
