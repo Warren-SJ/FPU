@@ -1,5 +1,5 @@
 # FPU
- A Floating Point Unit created in SystemVerilog and Verilog. The module contains the following capabilities:
+ A Floating Point Unit which has been created in SystemVerilog and Verilog. The module contains the following capabilities:
 
  * Addition of 2 floating point numbers.
  * Subtraction of 2 floating point numbers.
@@ -14,7 +14,7 @@ The single precision format consists of 32 bits, divided into 3 parts: the sign 
 
 Any floating point number can be represented in the following form:
 
-(-1)^s * 2^(e-127) * 1.m
+$$(-1)^s * 2^(e-127) * 1.m$$
 
 Where s is the sign bit, e is the exponent, and m is the mantissa. Here, it can be noticed that the exponent is biased by 127. This is done to allow for both positive and negative exponents to be represented.
 
