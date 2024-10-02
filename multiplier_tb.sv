@@ -27,12 +27,14 @@ module multiplier_tb;
     reg [31:0] C;
     reg CLK;  
     reg [5:0] flags;
+    reg done;
 	 multiplier uut (
     .A(A),
     .B(B),
     .C(C),
     .flags(flags),
-    .CLK(CLK)
+    .CLK(CLK),
+    .done(done)
 );
 
 
