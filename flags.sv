@@ -22,23 +22,23 @@
 
 module flags(
     input [31:0] num,
-    output snan,
-    output qnan,
-    output infinity,
-    output zero,
-    output subnormal,
-    output normal
+	  output [5:0]flags
     );
+	 wire snan,
+    wire qnan,
+    wire infinity,
+    wire zero,
+    wire subnormal,
+    wire normal
     wire expOnes, expZeros, sigZeros;
-     assign expOnes = &num[30:23];
-     assign expZeros = ~|num[30:23];
-     assign sigZeros = ~|num[22:0];
-     
+     assign expOnes = &num[30:23]; // Exponent is all ones
+     assign expZeros = ~|num[30:23]; // Exponent is all zeros
+     assign sigZeros = ~|num[22:0]; // Significand is all zeros
      assign snan = expOnes & ~sigZeros & ~num[22];
      assign qnan = expOnes & num[22];
      assign infinity = expOnes & sigZeros;
      assign zero = expZeros & sigZeros;
      assign subnormal = expZeros & ~sigZeros;
      assign normal = ~expOnes & ~expZeros;
-     
+     assign flags = {snan, qnan, infinity, zero, subnormal, normal}
 endmodule

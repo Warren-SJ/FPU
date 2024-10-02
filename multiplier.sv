@@ -25,11 +25,11 @@ module multiplier(
     input [31:0] A,
     input [31:0] B,
     output reg [31:0] C,
-    output reg qnan, snan, infinity, zero, subnormal, normal,
+    output reg [5:0] flags,
     input CLK
 );
-    wire a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal;
-    wire b_snan, b_qnan, b_infinity, b_zero, b_subnormal, b_normal;
+    reg a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal;
+    reg b_snan, b_qnan, b_infinity, b_zero, b_subnormal, b_normal;
     reg [31:0] Tmp;
     reg [23:0] Mantissa_A, Mantissa_B;
     reg signed [8:0] Exp_A, Exp_B;
@@ -37,43 +37,51 @@ module multiplier(
     reg [23:0] Tmp_Mantissa;
     reg [10:0] Tmp_Exp;
     reg Sign;
-
-    flags aClass(A, a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal);
-    flags bClass(B, b_snan, b_qnan, b_infinity, b_zero, b_subnormal, b_normal);
-
+	reg [5:0]a_flags;
+	reg [5:0] b_flags;
+    flags aClass(A, a_flags);
+    flags bClass(B, b_flags);
     always @(posedge CLK) begin
         // Reset all flags
-        qnan <= 0;
-        snan <= 0;
-        infinity <= 0;
-        zero <= 0;
-        subnormal <= 0;
-        normal <= 0;
-
+        a_snan      <= a_flags[5];
+        a_qnan      <= a_flags[4];
+        a_infinity  <= a_flags[3];
+        a_zero      <= a_flags[2];
+        a_subnormal <= a_flags[1];
+        a_normal    <= a_flags[0];
+        
+        b_snan      <= b_flags[5];
+        b_qnan      <= b_flags[4];
+        b_infinity  <= b_flags[3];
+        b_zero      <= b_flags[2];
+        b_subnormal <= b_flags[1];
+        b_normal    <= b_flags[0];
+        
         Sign <= A[31] ^ B[31];
 
         // Handle special cases first
+		  
         if (a_snan || b_snan) begin
             Tmp <= (a_snan ? A : B);
-            snan <= 1;
+            flags <= 6'b100000;
         end
         else if (a_qnan || b_qnan) begin
             Tmp <= (a_qnan ? A : B);
-            qnan <= 1;
+            flags <= 6'b010000;
         end
         else if (a_infinity || b_infinity) begin
             if (a_zero || b_zero) begin
                 // 0 * Infinity results in qNaN
                 Tmp <= {Sign, {8{1'b1}}, 1'b1, 22'h02A}; // Representation of qNaN
-                qnan <= 1;
+                flags <= 6'b010000;
             end else begin
                 Tmp <= {Sign, {8{1'b1}}, {23{1'b0}}}; // Infinity representation
-                infinity <= 1;
+                flags <= 6'b001000;
             end
         end
         else if (a_zero || b_zero || (a_subnormal && b_subnormal)) begin
             Tmp <= {Sign, {31{1'b0}}}; // Zero representation
-            zero <= 1;
+            flags <= 6'b000100;
         end
         else begin
             // Handle normal multiplication
@@ -96,23 +104,23 @@ module multiplier(
             if (Tmp_Exp < -149) begin
                 // Too small, underflow to zero
                 Tmp <= {Sign, {31{1'b0}}};
-                zero <= 1;
+                flags <= 6'b000100;
             end
             else if (Tmp_Exp < -126) begin
                 // Subnormal case
                 Tmp <= {Sign, {8{1'b0}}, result_Mantissa[22:0]};
-                subnormal <= 1;
+                flags <= 6'b000010;
             end
             else if (Tmp_Exp > 127) begin
                 // Overflow to infinity
                 Tmp <= {Sign, {8{1'b1}}, {23{1'b0}}};
-                infinity <= 1;
+                flags <= 6'b001000;
             end
             else begin
                 // Normal result
                 Tmp_Exp <= Tmp_Exp + 127; // Re-bias the exponent
                 Tmp <= {Sign, Tmp_Exp[7:0], Tmp_Mantissa[22:0]};
-                normal <= 1;
+                flags <= 6'b000001;
             end
         end
         C <= Tmp; // Assign the final result to output

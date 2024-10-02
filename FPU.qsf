@@ -90,3 +90,4 @@ set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 set_global_assignment -name SYSTEMVERILOG_FILE multiplier.sv
 set_global_assignment -name SYSTEMVERILOG_FILE Extractor.sv
+set_global_assignment -name SYSTEMVERILOG_FILE multiplier_tb.sv
