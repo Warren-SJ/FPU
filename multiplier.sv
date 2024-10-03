@@ -21,14 +21,14 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module multiplier(
-    input [31:0] A,
-    input [31:0] B,
-    output reg [31:0] C,
-    output reg [5:0] flags,
-    output reg done,
-    input CLK
-);
+module multiplier(A, B, C, flags, done, CLK);
+	 parameter BIT_WIDTH = 32;
+    input [BIT_WIDTH - 1:0] A;
+    input [BIT_WIDTH - 1:0] B;
+    output reg [BIT_WIDTH - 1:0] C;
+    output reg [5:0] flags;
+    output reg done;
+    input CLK;
     reg a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal;
     reg b_snan, b_qnan, b_infinity, b_zero, b_subnormal, b_normal;
     reg [31:0] Tmp;
@@ -94,6 +94,13 @@ module multiplier(
             Exp_A = A[30:23] - 127;
             Exp_B = B[30:23] - 127;
             Tmp_Exp = Exp_A + Exp_B;
+				Result_Mantissa = {23{B[0]}}&A;
+				for (i = 1; i < 23; i = i + 1)
+				begin
+					if (B[i] == 1'b1)
+					Result_Mantissa = Result_Mantissa + (({23{B[i]}}&A) << i);
+					
+				end
             result_Mantissa = Mantissa_A * Mantissa_B;
 
             // Normalize the result

@@ -20,16 +20,16 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module flags(
-    input [31:0] num,
-	  output [5:0]flags
-    );
-	 wire snan,
-    wire qnan,
-    wire infinity,
-    wire zero,
-    wire subnormal,
-    wire normal
+module flags(num, flags);
+    parameter BIT_WIDTH = 32;
+    input [BIT_WIDTH - 1:0] num;
+	output [5:0]flags;
+	wire snan;
+    wire qnan;
+    wire infinity;
+    wire zero;
+    wire subnormal;
+    wire normal;
     wire expOnes, expZeros, sigZeros;
      assign expOnes = &num[30:23]; // Exponent is all ones
      assign expZeros = ~|num[30:23]; // Exponent is all zeros
@@ -40,5 +40,5 @@ module flags(
      assign zero = expZeros & sigZeros;
      assign subnormal = expZeros & ~sigZeros;
      assign normal = ~expOnes & ~expZeros;
-     assign flags = {snan, qnan, infinity, zero, subnormal, normal}
+     assign flags = {snan, qnan, infinity, zero, subnormal, normal};
 endmodule
