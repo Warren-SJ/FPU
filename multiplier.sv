@@ -22,7 +22,7 @@
 
 
 module multiplier(A, B, C, flags, done, CLK);
-	 parameter BIT_WIDTH = 32;
+	parameter BIT_WIDTH = 32;
     input [BIT_WIDTH - 1:0] A;
     input [BIT_WIDTH - 1:0] B;
     output reg [BIT_WIDTH - 1:0] C;
@@ -32,7 +32,7 @@ module multiplier(A, B, C, flags, done, CLK);
     reg a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal;
     reg b_snan, b_qnan, b_infinity, b_zero, b_subnormal, b_normal;
     reg [BIT_WIDTH-1:0] Tmp;
-    reg [23:0] Mantissa_A, Mantissa_B;
+    reg [22:0] Mantissa_A, Mantissa_B;
     reg signed [8:0] Exp_A, Exp_B;
     reg [45:0] Result_Mantissa;
     reg [23:0] Tmp_Mantissa;

@@ -6,10 +6,10 @@
 // Create Date: 09/04/2024 11:37:07 AM
 // Design Name: 
 // Module Name: add_demo
-// Project Name: FPU
-// Target Devices: Altera Cyclone IV EP4CE115F29C7N 
+// Project Name: 
+// Target Devices: 
 // Tool Versions: 
-// Description: A demo of the addition and subtraction capabilities
+// Description: 
 // 
 // Dependencies: 
 // 
@@ -41,17 +41,10 @@ module add_demo(
         .C(C)
     );
 
-	always @(posedge CLK or negedge RSTn) begin
-        if (!RSTn) begin
-            A <= 32'h0;
-            B <= 32'h0;
-            operation <= 1'b0;
-        end
-        else begin
-            A <= 32'h40625000; // 3.5 in IEEE 754 single-precision format
-            B <= 32'h3FA03200; // 1.25 in IEEE 754 single-precision format
-            operation <= 1'b0; // 0 for addition, 1 for subtraction
-        end
+	always @(posedge CLK) begin
+        A = 32'h40600000; // 3.5
+        B = 32'h3FA00000; // 1.25
+        operation = 1'b0; // 0 for addition, 1 for subtraction
     end
     // Assign the most significant 18 bits of C to the LEDs
     assign LEDR = C[31:14];

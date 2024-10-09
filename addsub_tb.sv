@@ -24,14 +24,21 @@ module addsub_tb;
     reg [31:0] C;
     reg CLK;  
     reg [5:0] flags;
+    reg [24:0] result_tmp;
     reg done;
+    reg operation;
+    reg [23:0] mntA;
+    reg [23:0] mntB;
 	addsub uut (
     .A(A),
     .B(B),
     .C(C),
     .flags(flags),
     .CLK(CLK),
-    .done(done)
+    .done(done),
+    .result_tmp(result_tmp),
+    .mnt_A(mntA),
+    .mnt_B(mntB)
 );
 
 
@@ -47,59 +54,127 @@ module addsub_tb;
 
         // Test Case 1: Infinity * Non zero number
         #10
+        operation = 1'b1;
         // Case 1: Infinity * Infinity
         A = 32'b01111111100000000000000000000000; // +Infinity
         B = 32'b01111111100000000000000000000000; // +Infinity
-        #10;
+
+        #50;
         $display("Test Case 1: Infinity * Infinity");
         $display("C = %b, flags = %b", C, flags);
 
         // Case 2: Infinity * Zero (should return qNaN)
         A = 32'b01111111100000000000000000000000; // +Infinity
         B = 32'b00000000000000000000000000000000; // +Zero
-        #10;
+        #50;
         $display("Test Case 2: Infinity * Zero (should be qNaN)");
         $display("C = %b, flags = %b", C, flags);
 
         // Case 3: Zero * Zero (should return zero)
         A = 32'b00000000000000000000000000000000; // +Zero
         B = 32'b00000000000000000000000000000000; // +Zero
-        #10;
+        #50;
         $display("Test Case 3: Zero * Zero");
         $display("C = %b, flags = %b", C, flags);
 
         // Case 4: sNaN * Normal (should return sNaN)
         A = 32'b01111111110000000000000000000001; // sNaN
         B = 32'b01000000110000000000000000000000; // Normal number (6.0)
-        #10;
+        #50;
         $display("Test Case 4: sNaN * Normal");
         $display("C = %b, flags = %b", C, flags);
 
         // Case 5: qNaN * Normal (should return qNaN)
         A = 32'b01111111110000000000000000000000; // qNaN
         B = 32'b01000000110000000000000000000000; // Normal number (6.0)
-        #10;
+        #50;
         $display("Test Case 5: qNaN * Normal");
         $display("C = %b, flags = %b", C, flags);
 
         // Case 6: Subnormal * Normal (should return subnormal)
         A = 32'b00000000000000000000000000000001; // Smallest subnormal number
         B = 32'b01000000010000000000000000000000; // Normal number (3.0)
-        #10;
+        #50;
         $display("Test Case 6: Subnormal * Normal");
         $display("C = %b, flags = %b", C, flags);
 
         // Case 7: Normal * Normal (should return normal)
         A = 32'b01000000101000000000000000000000; // Normal number (5.0)
         B = 32'b01000000110000000000000000000000; // Normal number (6.0)
-        #10;
+        #50;
         $display("Test Case 7: Normal * Normal");
         $display("C = %b, flags = %b", C, flags);
 
         // Case 8: Infinity * Normal (should return infinity)
         A = 32'b01111111100000000000000000000000; // +Infinity
         B = 32'b01000000110000000000000000000000; // Normal number (6.0)
-        #10;
+        #50;
+        $display("Test Case 8: Infinity * Normal");
+        $display("C = %b, flags = %b", C, flags);
+
+        // Case 9: Subnormal * Subnormal (should return subnormal)
+        A = 32'b00000000000000000000000000000001; // Smallest subnormal number
+        B = 32'b00000000000000000000000000000010; // Subnormal number
+        #50;
+        $display("Test Case 9: Subnormal * Subnormal");
+        $display("C = %b, flags = %b", C, flags);
+       
+       #50;
+        operation = 1'b0;
+        // Case 1: Infinity * Infinity
+        A = 32'b01111111100000000000000000000000; // +Infinity
+        B = 32'b01111111100000000000000000000000; // +Infinity
+
+        #50;
+        $display("Test Case 1: Infinity * Infinity");
+        $display("C = %b, flags = %b", C, flags);
+
+        // Case 2: Infinity * Zero (should return qNaN)
+        A = 32'b01111111100000000000000000000000; // +Infinity
+        B = 32'b00000000000000000000000000000000; // +Zero
+        #50;
+        $display("Test Case 2: Infinity * Zero (should be qNaN)");
+        $display("C = %b, flags = %b", C, flags);
+
+        // Case 3: Zero * Zero (should return zero)
+        A = 32'b00000000000000000000000000000000; // +Zero
+        B = 32'b00000000000000000000000000000000; // +Zero
+        #50;
+        $display("Test Case 3: Zero * Zero");
+        $display("C = %b, flags = %b", C, flags);
+
+        // Case 4: sNaN * Normal (should return sNaN)
+        A = 32'b01111111110000000000000000000001; // sNaN
+        B = 32'b01000000110000000000000000000000; // Normal number (6.0)
+        #50;
+        $display("Test Case 4: sNaN * Normal");
+        $display("C = %b, flags = %b", C, flags);
+
+        // Case 5: qNaN * Normal (should return qNaN)
+        A = 32'b01111111110000000000000000000000; // qNaN
+        B = 32'b01000000110000000000000000000000; // Normal number (6.0)
+        #50;
+        $display("Test Case 5: qNaN * Normal");
+        $display("C = %b, flags = %b", C, flags);
+
+        // Case 6: Subnormal * Normal (should return subnormal)
+        A = 32'b00000000000000000000000000000001; // Smallest subnormal number
+        B = 32'b01000000010000000000000000000000; // Normal number (3.0)
+        #50;
+        $display("Test Case 6: Subnormal * Normal");
+        $display("C = %b, flags = %b", C, flags);
+
+        // Case 7: Normal * Normal (should return normal)
+        A = 32'b01000000101000000000000000000000; // Normal number (5.0)
+        B = 32'b01000000110000000000000000000000; // Normal number (6.0)
+        #50;
+        $display("Test Case 7: Normal * Normal");
+        $display("C = %b, flags = %b", C, flags);
+
+        // Case 8: Infinity * Normal (should return infinity)
+        A = 32'b01111111100000000000000000000000; // +Infinity
+        B = 32'b01000000110000000000000000000000; // Normal number (6.0)
+        #50;
         $display("Test Case 8: Infinity * Normal");
         $display("C = %b, flags = %b", C, flags);
 
@@ -109,9 +184,8 @@ module addsub_tb;
         #10;
         $display("Test Case 9: Subnormal * Subnormal");
         $display("C = %b, flags = %b", C, flags);
-        // End simulation
+        
         #40
         $stop;
     end
-
 endmodule

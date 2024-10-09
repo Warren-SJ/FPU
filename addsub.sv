@@ -21,7 +21,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module addsub(A, B, C, flags, done, CLK);
+module addsub(A, B, C, flags, done, CLK, operation, result_tmp, mnt_A, mnt_B);
     parameter BIT_WIDTH = 32;
     input [BIT_WIDTH - 1:0] A;
     input [BIT_WIDTH - 1:0] B;
@@ -29,17 +29,19 @@ module addsub(A, B, C, flags, done, CLK);
     output reg [5:0] flags;
     output reg done;
     input CLK;
+    input operation;
+    output reg [24:0] result_tmp;
     reg a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal;
     reg b_snan, b_qnan, b_infinity, b_zero, b_subnormal, b_normal;
     reg [BIT_WIDTH-1:0] Tmp;
-    reg [24:0] Mantissa_A, Mantissa_B;
-    reg signed [8:0] Exp_A, Exp_B;
+    reg [23:0] Mantissa_A, Mantissa_B;
+    reg [7:0] Exp_A, Exp_B;
     reg Sign;
 	reg [5:0]a_flags;
 	reg [5:0] b_flags;
 	reg [8:0] shiftAmount;
 	reg [4:0] subnormalShift;
-	reg [24 :0] result_Mantissa;
+	reg [24:0] result_Mantissa;
 	reg [22:0] Tmp_Mantissa;
 	reg signed [7:0] Tmp_Exp;
     flags aClass(A, a_flags);
@@ -63,9 +65,8 @@ module addsub(A, B, C, flags, done, CLK);
         
         Exp_A = A[30:23];
         Exp_B = B[30:23];
-        Mantissa_A = {1'b1,A[22:0]};
+        Mantissa_A = {1'b1, A[22:0]};
         Mantissa_B = {1'b1, B[22:0]};
-        
         done = 1'b0;
         
         if (a_snan | b_snan) begin
@@ -103,7 +104,10 @@ module addsub(A, B, C, flags, done, CLK);
             Sign = A[BIT_WIDTH - 1];
             shiftAmount = Exp_A - Exp_B;
             Mantissa_B = Mantissa_B >> shiftAmount;
-            result_Mantissa = Mantissa_A + Mantissa_B;
+            if (operation == 1'b1)
+                result_Mantissa = Mantissa_A + Mantissa_B;
+            else
+                result_Mantissa = Mantissa_A - Mantissa_B;
             Tmp_Exp = Exp_A;
             if (result_Mantissa[24]) begin
                 Tmp_Mantissa = result_Mantissa[23:1];
@@ -111,6 +115,7 @@ module addsub(A, B, C, flags, done, CLK);
             end else begin
                 Tmp_Mantissa = result_Mantissa[22:0];
             end
+            result_tmp = result_Mantissa ;
             if (Tmp_Exp > 127) //Infinity Output
                 begin
                 Tmp = {Sign, 8'b1, 22'b0}; 
@@ -129,14 +134,16 @@ module addsub(A, B, C, flags, done, CLK);
                 flags = 6'b000010;
                 end
             else
-                Tmp = {Sign, Tmp_Exp, result_Mantissa[23:1]};
+                Tmp = {Sign, Tmp_Exp, Tmp_Mantissa[22:0]};
                 flags = 6'b000001;
-          end
-          else begin
+          end else begin
             Sign = B[BIT_WIDTH - 1];
             shiftAmount = Exp_B - Exp_A;
             Mantissa_A = Mantissa_A >> shiftAmount;
-            result_Mantissa = Mantissa_A + Mantissa_B;
+             if (operation == 1'b1)
+                result_Mantissa = Mantissa_A + Mantissa_B;
+            else
+                result_Mantissa = Mantissa_A - Mantissa_B;
             Tmp_Exp = Exp_B;
             if (result_Mantissa[24]) begin
                 Tmp_Mantissa = result_Mantissa[23:1];
@@ -144,6 +151,7 @@ module addsub(A, B, C, flags, done, CLK);
             end else begin
                 Tmp_Mantissa = result_Mantissa[22:0];
             end
+            result_tmp = result_Mantissa ;
             if (Tmp_Exp > 127) //Infinity Output
                 begin
                 Tmp = {Sign, 8'b1, 22'b0}; 
@@ -162,7 +170,7 @@ module addsub(A, B, C, flags, done, CLK);
                 flags = 6'b000010;
                 end
             else
-                Tmp = {Sign, Tmp_Exp, result_Mantissa[23:1]};
+                Tmp = {Sign, Tmp_Exp, Tmp_Mantissa[22:0]};
                 flags = 6'b000001;
             end
           end
