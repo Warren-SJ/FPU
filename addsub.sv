@@ -7,7 +7,7 @@
 // Design Name: Adder and Subtracter for FloatinG Point Unit
 // Module Name: AddSub
 // Project Name: FPU
-// Target Devices:  Altera Cyclone IV EP4CE115F29C7N
+// Target Devices:  XC7A35T1CPG
 // Tool Versions: 
 // Description: The adder and subtracter component of the Floating Point Unit.
 //              This is capable of handling IEEE single precision inputs with exponents ranging from -128 to 127
@@ -21,109 +21,152 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module addsub(
-    input [31:0] A,
-    input [31:0] B,
-    input operation, // 0 for addition, 1 for subtraction
-    input CLK,
-    input RSTn,
-    output reg [31:0] C
-);
-
-    wire [7:0] expA = A[30:23];
-    wire [7:0] expB = B[30:23];
-    wire signA = A[31];
-    wire signB = B[31];
-    reg [7:0] finalExponent;
-    wire [23:0] mantissaA = {1'b1, A[22:0]};
-    wire [23:0] mantissaB = {1'b1, B[22:0]};
-    reg [7:0] difference;
-    reg [23:0] shiftedA;
-    reg [23:0] shiftedB;
-    reg [24:0] ans;
-    reg largeA; // If exponent of A is larger than that of B, this is high
-    reg requiredoperation;
-    reg [5:0] index;
-    reg signResult;
+module addsub(A, B, C, flags, done, CLK);
+    parameter BIT_WIDTH = 32;
+    input [BIT_WIDTH - 1:0] A;
+    input [BIT_WIDTH - 1:0] B;
+    output reg [BIT_WIDTH - 1:0] C;
+    output reg [5:0] flags;
+    output reg done;
+    input CLK;
+    reg a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal;
+    reg b_snan, b_qnan, b_infinity, b_zero, b_subnormal, b_normal;
+    reg [BIT_WIDTH-1:0] Tmp;
+    reg [24:0] Mantissa_A, Mantissa_B;
+    reg signed [8:0] Exp_A, Exp_B;
+    reg Sign;
+	reg [5:0]a_flags;
+	reg [5:0] b_flags;
+	reg [8:0] shiftAmount;
+	reg [4:0] subnormalShift;
+	reg [24 :0] result_Mantissa;
+	reg [22:0] Tmp_Mantissa;
+	reg signed [7:0] Tmp_Exp;
+    flags aClass(A, a_flags);
+    flags bClass(B, b_flags);
 
     // Extract info about operands and operators
-    always @* begin
-        if (expA > expB) begin
-            difference <= expA - expB;
-            largeA <= 1'b1;
-        end else if (expB > expA) begin
-            difference <= expB - expA;
-            largeA <= 1'b0;
-        end else begin
-            difference <= 8'b0;
-            largeA <= 1'b0;
-        end
-        requiredoperation = signB ^ operation; // required operation is 1 if subtraction, 0 if addition
-    end
-
-    // Add or Sub logic
     always @(posedge CLK) begin
-        if (!RSTn) begin
-            C <= 32'b0;
-        end else begin
-            if (largeA) begin
-                shiftedB <= mantissaB >> difference;
-                shiftedA <= mantissaA;
-                finalExponent <= expA;
-                signResult <= signA;
-            end else begin
-                shiftedA <= mantissaA >> difference;
-                shiftedB <= mantissaB;
-                finalExponent <= expB;
-                signResult <= signB;
-            end
-
-            if (!requiredoperation) begin // Addition
-                ans <= shiftedA + shiftedB;
-                signResult <= signA;
-            end else begin // Subtraction
-                if (shiftedA >= shiftedB) begin
-                    ans <= shiftedA - shiftedB;
-                end else begin
-                    ans <= shiftedB - shiftedA;
-                    signResult <= !signResult; // Change sign if B is larger
-                end
-            end
-
-            // Normalize the result
-            casex (ans)
-                24'b1??????????????????????? : index <= 5'd23;
-                24'b01?????????????????????? : index <= 5'd22;
-                24'b001????????????????????? : index <= 5'd21;
-                24'b0001???????????????????? : index <= 5'd20;
-                24'b00001??????????????????? : index <= 5'd19;
-                24'b000001?????????????????? : index <= 5'd18;
-                24'b0000001????????????????? : index <= 5'd17;
-                24'b00000001???????????????? : index <= 5'd16;
-                24'b000000001??????????????? : index <= 5'd15;
-                24'b0000000001?????????????? : index <= 5'd14;
-                24'b00000000001????????????? : index <= 5'd13;
-                24'b000000000001???????????? : index <= 5'd12;
-                24'b0000000000001??????????? : index <= 5'd11;
-                24'b00000000000001?????????? : index <= 5'd10;
-                24'b000000000000001????????? : index <= 5'd9;
-                24'b0000000000000001???????? : index <= 5'd8;
-                24'b00000000000000001??????? : index <= 5'd7;
-                24'b000000000000000001?????? : index <= 5'd6;
-                24'b0000000000000000001????? : index <= 5'd5;
-                24'b00000000000000000001???? : index <= 5'd4;
-                24'b000000000000000000001??? : index <= 5'd3;
-                24'b0000000000000000000001?? : index <= 5'd2;
-                24'b00000000000000000000001? : index <= 5'd1;
-                24'b000000000000000000000001 : index <= 5'd0;
-                default: index <= 5'd0;
-            endcase
-
-            ans <= ans >> index;
-            finalExponent <= finalExponent - index; // Decrease the exponent after normalization
-            C <= {signResult, finalExponent, ans[22:0]};
-				//C<=32'hffffffff;
+        a_snan      = a_flags[5];
+        a_qnan      = a_flags[4];
+        a_infinity  = a_flags[3];
+        a_zero      = a_flags[2];
+        a_subnormal = a_flags[1];
+        a_normal    = a_flags[0];
+        
+        b_snan      = b_flags[5];
+        b_qnan      = b_flags[4];
+        b_infinity  = b_flags[3];
+        b_zero      = b_flags[2];
+        b_subnormal = b_flags[1];
+        b_normal    = b_flags[0];
+        
+        Exp_A = A[30:23];
+        Exp_B = B[30:23];
+        Mantissa_A = {1'b1,A[22:0]};
+        Mantissa_B = {1'b1, B[22:0]};
+        
+        done = 1'b0;
+        
+        if (a_snan | b_snan) begin
+            Tmp = (a_snan ? A : B);
+            flags = 6'b100000;
         end
-    end
-
+        else if (a_qnan | b_qnan) begin
+            Tmp = (a_qnan ? A : B);
+            flags = 6'b010000;
+        end
+        else if (a_zero & b_zero)
+        begin
+            Tmp = A;
+            flags = 6'b000100;
+            end
+         else if (a_infinity & b_infinity)
+         begin
+            Tmp = {A[BIT_WIDTH - 1], {8{1'b1}}, 1'b1, 22'h02A};
+            flags = 6'b010000;
+            end
+          else if (a_infinity)
+          begin
+            Tmp = A;
+            flags = 6'b001000;
+          end
+          else if (b_infinity)
+          begin
+            Tmp = B;
+            flags = 6'b001000;
+          end
+          else
+          begin
+          if(Exp_A > Exp_B)
+          begin
+            Sign = A[BIT_WIDTH - 1];
+            shiftAmount = Exp_A - Exp_B;
+            Mantissa_B = Mantissa_B >> shiftAmount;
+            result_Mantissa = Mantissa_A + Mantissa_B;
+            Tmp_Exp = Exp_A;
+            if (result_Mantissa[24]) begin
+                Tmp_Mantissa = result_Mantissa[23:1];
+                Tmp_Exp = Tmp_Exp + 1;
+            end else begin
+                Tmp_Mantissa = result_Mantissa[22:0];
+            end
+            if (Tmp_Exp > 127) //Infinity Output
+                begin
+                Tmp = {Sign, 8'b1, 22'b0}; 
+                flags = 6'b001000;
+                end
+            else if (Tmp_Exp < -149) //Zero Output
+                begin
+                Tmp = {Sign, 31'b0};
+                flags = 6'b000100; 
+                end
+            else if (Tmp_Exp < -126) // Subnormal Output
+                begin
+                subnormalShift = -126 - Tmp_Exp;
+                Tmp_Mantissa = Tmp_Mantissa >> subnormalShift;
+                Tmp = {Sign, 8'b0, Tmp_Mantissa[22:0]};
+                flags = 6'b000010;
+                end
+            else
+                Tmp = {Sign, Tmp_Exp, result_Mantissa[23:1]};
+                flags = 6'b000001;
+          end
+          else begin
+            Sign = B[BIT_WIDTH - 1];
+            shiftAmount = Exp_B - Exp_A;
+            Mantissa_A = Mantissa_A >> shiftAmount;
+            result_Mantissa = Mantissa_A + Mantissa_B;
+            Tmp_Exp = Exp_B;
+            if (result_Mantissa[24]) begin
+                Tmp_Mantissa = result_Mantissa[23:1];
+                Tmp_Exp = Tmp_Exp + 1;
+            end else begin
+                Tmp_Mantissa = result_Mantissa[22:0];
+            end
+            if (Tmp_Exp > 127) //Infinity Output
+                begin
+                Tmp = {Sign, 8'b1, 22'b0}; 
+                flags = 6'b001000;
+                end
+            else if (Tmp_Exp < -149) //Zero Output
+                begin
+                Tmp = {Sign, 31'b0};
+                flags = 6'b000100; 
+                end
+            else if (Tmp_Exp < -126) // Subnormal Output
+                begin
+                subnormalShift = -126 - Tmp_Exp;
+                Tmp_Mantissa = Tmp_Mantissa >> subnormalShift;
+                Tmp = {Sign, 8'b0, Tmp_Mantissa[22:0]};
+                flags = 6'b000010;
+                end
+            else
+                Tmp = {Sign, Tmp_Exp, result_Mantissa[23:1]};
+                flags = 6'b000001;
+            end
+          end
+          C = Tmp ;
+          done = 1'b1;
+   end 
 endmodule

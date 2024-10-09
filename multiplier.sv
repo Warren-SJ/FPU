@@ -31,16 +31,15 @@ module multiplier(A, B, C, flags, done, CLK);
     input CLK;
     reg a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal;
     reg b_snan, b_qnan, b_infinity, b_zero, b_subnormal, b_normal;
-    reg [31:0] Tmp;
+    reg [BIT_WIDTH-1:0] Tmp;
     reg [23:0] Mantissa_A, Mantissa_B;
     reg signed [8:0] Exp_A, Exp_B;
-    reg [45:0] result_Mantissa;
+    reg [45:0] Result_Mantissa;
     reg [23:0] Tmp_Mantissa;
     reg [10:0] Tmp_Exp;
     reg Sign;
 	reg [5:0]a_flags;
 	reg [5:0] b_flags;
-	reg done;
     flags aClass(A, a_flags);
     flags bClass(B, b_flags);
     always @(posedge CLK) begin
@@ -88,27 +87,39 @@ module multiplier(A, B, C, flags, done, CLK);
             flags = 6'b000100;
         end
         else begin
-            // Handle normal multiplication
-            Mantissa_A = {1'b1, A[22:0]}; // Implicit 1 for normalized values
-            Mantissa_B = {1'b1, B[22:0]};
+        // Check if A is subnormal
+        if (a_subnormal) begin
+            Mantissa_A = {1'b0, A[22:0]}; // No implicit 1 for subnormals
+            Exp_A = -126; // Subnormal exponent is treated as -126
+        end else begin
+            Mantissa_A = {1'b1, A[22:0]}; // Implicit 1 for normal values
             Exp_A = A[30:23] - 127;
+        end
+
+    // Check if B is subnormal
+        if (b_subnormal) begin
+            Mantissa_B = {1'b0, B[22:0]}; // No implicit 1 for subnormals
+            Exp_B = -126; // Subnormal exponent is treated as -126
+        end else begin
+            Mantissa_B = {1'b1, B[22:0]}; // Implicit 1 for normal values
             Exp_B = B[30:23] - 127;
+        end
+            // Handle normal multiplication
             Tmp_Exp = Exp_A + Exp_B;
 				Result_Mantissa = {23{B[0]}}&A;
-				for (i = 1; i < 23; i = i + 1)
+				for (int i = 1; i < 24; i = i + 1)
 				begin
 					if (B[i] == 1'b1)
 					Result_Mantissa = Result_Mantissa + (({23{B[i]}}&A) << i);
 					
 				end
-            result_Mantissa = Mantissa_A * Mantissa_B;
 
             // Normalize the result
-            if (result_Mantissa[45] == 1'b1) begin
-                Tmp_Mantissa = result_Mantissa[44:22];
+            if (Result_Mantissa[45] == 1'b1) begin
+                Tmp_Mantissa = Result_Mantissa[44:22];
                 Tmp_Exp = Tmp_Exp + 1;
             end else begin
-                Tmp_Mantissa = result_Mantissa[45:23];
+                Tmp_Mantissa = Result_Mantissa[45:23];
             end
 
             // Handle the result based on exponent range
@@ -119,7 +130,7 @@ module multiplier(A, B, C, flags, done, CLK);
             end
             else if (Tmp_Exp < -126) begin
                 // Subnormal case
-                Tmp = {Sign, {8{1'b0}}, result_Mantissa[22:0]};
+                Tmp = {Sign, {8{1'b0}}, Result_Mantissa[22:0]};
                 flags = 6'b000010;
             end
             else if (Tmp_Exp > 127) begin
