@@ -24,11 +24,8 @@ module addsub_tb;
     reg [31:0] C;
     reg CLK;  
     reg [5:0] flags;
-    reg [24:0] result_tmp;
     reg done;
     reg operation;
-    reg [23:0] mntA;
-    reg [23:0] mntB;
 	addsub uut (
     .A(A),
     .B(B),
@@ -36,9 +33,7 @@ module addsub_tb;
     .flags(flags),
     .CLK(CLK),
     .done(done),
-    .result_tmp(result_tmp),
-    .mnt_A(mntA),
-    .mnt_B(mntB)
+    .operation(operation)
 );
 
 

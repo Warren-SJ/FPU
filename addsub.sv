@@ -21,7 +21,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module addsub(A, B, C, flags, done, CLK, operation, result_tmp, mnt_A, mnt_B);
+module addsub(A, B, C, flags, done, CLK, operation);
     parameter BIT_WIDTH = 32;
     input [BIT_WIDTH - 1:0] A;
     input [BIT_WIDTH - 1:0] B;
@@ -30,7 +30,6 @@ module addsub(A, B, C, flags, done, CLK, operation, result_tmp, mnt_A, mnt_B);
     output reg done;
     input CLK;
     input operation;
-    output reg [24:0] result_tmp;
     reg a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal;
     reg b_snan, b_qnan, b_infinity, b_zero, b_subnormal, b_normal;
     reg [BIT_WIDTH-1:0] Tmp;
@@ -105,7 +104,7 @@ module addsub(A, B, C, flags, done, CLK, operation, result_tmp, mnt_A, mnt_B);
             shiftAmount = Exp_A - Exp_B;
             Mantissa_B = Mantissa_B >> shiftAmount;
             if (operation == 1'b1)
-                result_Mantissa = Mantissa_A + Mantissa_B;
+               result_Mantissa = Mantissa_A + Mantissa_B ;
             else
                 result_Mantissa = Mantissa_A - Mantissa_B;
             Tmp_Exp = Exp_A;
@@ -115,7 +114,6 @@ module addsub(A, B, C, flags, done, CLK, operation, result_tmp, mnt_A, mnt_B);
             end else begin
                 Tmp_Mantissa = result_Mantissa[22:0];
             end
-            result_tmp = result_Mantissa ;
             if (Tmp_Exp > 127) //Infinity Output
                 begin
                 Tmp = {Sign, 8'b1, 22'b0}; 
@@ -141,7 +139,7 @@ module addsub(A, B, C, flags, done, CLK, operation, result_tmp, mnt_A, mnt_B);
             shiftAmount = Exp_B - Exp_A;
             Mantissa_A = Mantissa_A >> shiftAmount;
              if (operation == 1'b1)
-                result_Mantissa = Mantissa_A + Mantissa_B;
+               result_Mantissa = Mantissa_A + Mantissa_B ;
             else
                 result_Mantissa = Mantissa_A - Mantissa_B;
             Tmp_Exp = Exp_B;
@@ -151,7 +149,7 @@ module addsub(A, B, C, flags, done, CLK, operation, result_tmp, mnt_A, mnt_B);
             end else begin
                 Tmp_Mantissa = result_Mantissa[22:0];
             end
-            result_tmp = result_Mantissa ;
+
             if (Tmp_Exp > 127) //Infinity Output
                 begin
                 Tmp = {Sign, 8'b1, 22'b0}; 
