@@ -22,26 +22,35 @@
 
 
 module multiplier(A, B, C, flags, done, CLK);
-	parameter BIT_WIDTH = 32;
+    parameter BIT_WIDTH = 32;
     input [BIT_WIDTH - 1:0] A;
     input [BIT_WIDTH - 1:0] B;
     output reg [BIT_WIDTH - 1:0] C;
     output reg [5:0] flags;
     output reg done;
     input CLK;
+    
     reg a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal;
     reg b_snan, b_qnan, b_infinity, b_zero, b_subnormal, b_normal;
     reg [BIT_WIDTH-1:0] Tmp;
-    reg [22:0] Mantissa_A, Mantissa_B;
+    reg [23:0] Mantissa_A, Mantissa_B;
     reg signed [8:0] Exp_A, Exp_B;
-    reg [45:0] Result_Mantissa;
+    reg [47:0] Result_Mantissa;
     reg [23:0] Tmp_Mantissa;
-    reg [10:0] Tmp_Exp;
+    reg signed [10:0] Tmp_Exp;
     reg Sign;
-	reg [5:0]a_flags;
-	reg [5:0] b_flags;
+    reg [5:0] a_flags;
+    reg [5:0] b_flags;
+
     flags aClass(A, a_flags);
     flags bClass(B, b_flags);
+    
+    shift_and_add_multiplier mantissa_multiplier (
+        .Mantissa_A(Mantissa_A),
+        .Mantissa_B(Mantissa_B),
+        .Result_Mantissa(Result_Mantissa)
+    );
+    
     always @(posedge CLK) begin
         // Reset all flags
         a_snan      = a_flags[5];
@@ -60,10 +69,10 @@ module multiplier(A, B, C, flags, done, CLK);
         
         done = 1'b0;
         
-        Sign = A[31] ^ B[31];
+        Sign = A[31] ^ B[31]; // Result sign is the XOR of A and B sign bits
 
+        
         // Handle special cases first
-		  
         if (a_snan || b_snan) begin
             Tmp = (a_snan ? A : B);
             flags = 6'b100000;
@@ -75,62 +84,65 @@ module multiplier(A, B, C, flags, done, CLK);
         else if (a_infinity || b_infinity) begin
             if (a_zero || b_zero) begin
                 // 0 * Infinity results in qNaN
-                Tmp = {Sign, {8{1'b1}}, 1'b1, 22'h02A}; // Representation of qNaN
+                Tmp = {Sign, {8{1'b1}}, 1'b1, 22'h02A}; // qNaN
                 flags = 6'b010000;
             end else begin
-                Tmp = {Sign, {8{1'b1}}, {23{1'b0}}}; // Infinity representation
+                Tmp = {Sign, {8{1'b1}}, {23{1'b0}}}; // Infinity
                 flags = 6'b001000;
             end
         end
-        else if (a_zero || b_zero || (a_subnormal && b_subnormal)) begin
-            Tmp = {Sign, {31{1'b0}}}; // Zero representation
+        else if (a_zero || b_zero) begin
+            Tmp = {Sign, {31{1'b0}}}; // Zero
             flags = 6'b000100;
         end
         else begin
-        // Check if A is subnormal
-        if (a_subnormal) begin
-            Mantissa_A = {1'b0, A[22:0]}; // No implicit 1 for subnormals
-            Exp_A = -126; // Subnormal exponent is treated as -126
-        end else begin
-            Mantissa_A = {1'b1, A[22:0]}; // Implicit 1 for normal values
-            Exp_A = A[30:23] - 127;
-        end
 
-    // Check if B is subnormal
-        if (b_subnormal) begin
-            Mantissa_B = {1'b0, B[22:0]}; // No implicit 1 for subnormals
-            Exp_B = -126; // Subnormal exponent is treated as -126
-        end else begin
-            Mantissa_B = {1'b1, B[22:0]}; // Implicit 1 for normal values
-            Exp_B = B[30:23] - 127;
-        end
-            // Handle normal multiplication
+            // Extract mantissas and exponents from A and B
+            if (a_subnormal) begin
+                Mantissa_A = {1'b0, A[22:0]}; // No implicit 1 for subnormals
+                Exp_A = -126;
+                while (Mantissa_A[23] == 1'b0 && Exp_A > -149) begin
+                    Mantissa_A = Mantissa_A << 1;
+                    Exp_A = Exp_A - 1;
+                 end
+            end else begin
+                Mantissa_A = {1'b1, A[22:0]}; // Implicit 1 for normal numbers
+                Exp_A = A[30:23] - 127;
+            end
+
+            if (b_subnormal) begin
+                Mantissa_B = {1'b0, B[22:0]}; // No implicit 1 for subnormals
+                Exp_B = -126;
+                while (Mantissa_B[23] == 1'b0 && Exp_B > -149) begin
+                    Mantissa_B = Mantissa_B << 1;
+                    Exp_B = Exp_B - 1;
+                 end
+            end else begin
+                Mantissa_B = {1'b1, B[22:0]}; // Implicit 1 for normal numbers
+                Exp_B = B[30:23] - 127;
+            end
+
+            // Add exponents
             Tmp_Exp = Exp_A + Exp_B;
-				Result_Mantissa = {23{B[0]}}&A;
-				for (int i = 1; i < 24; i = i + 1)
-				begin
-					if (B[i] == 1'b1)
-					Result_Mantissa = Result_Mantissa + (({23{B[i]}}&A) << i);
-					
-				end
 
-            // Normalize the result
-            if (Result_Mantissa[45] == 1'b1) begin
-                Tmp_Mantissa = Result_Mantissa[44:22];
+            // Normalize the result (shift mantissa if needed)
+            if (Result_Mantissa[47]) begin
+                // If the result's MSB is 1, shift right
+                Tmp_Mantissa = Result_Mantissa[46:24];
                 Tmp_Exp = Tmp_Exp + 1;
             end else begin
                 Tmp_Mantissa = Result_Mantissa[45:23];
             end
 
-            // Handle the result based on exponent range
+            // Handle the result based on the exponent
             if (Tmp_Exp < -149) begin
-                // Too small, underflow to zero
+                // Underflow to zero
                 Tmp = {Sign, {31{1'b0}}};
                 flags = 6'b000100;
             end
             else if (Tmp_Exp < -126) begin
-                // Subnormal case
-                Tmp = {Sign, {8{1'b0}}, Result_Mantissa[22:0]};
+                // Subnormal result
+                Tmp = {Sign, {8{1'b0}}, Tmp_Mantissa[22:0]};
                 flags = 6'b000010;
             end
             else if (Tmp_Exp > 127) begin
@@ -145,8 +157,10 @@ module multiplier(A, B, C, flags, done, CLK);
                 flags = 6'b000001;
             end
         end
-        C = Tmp; // Assign the final result to output
+        
+        C = Tmp; // Assign the final result
         done = 1'b1;
     end
 endmodule
+
 
