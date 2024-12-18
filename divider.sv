@@ -47,13 +47,19 @@ module divider(A, B, C, flags, done, CLK);
     flags aClass(A, a_flags);
     flags bClass(B, b_flags);
 
-    reg [23:0] Quotient;
+    reg [47:0] Quotient;
     reg [23:0] Remainder;
     reg [24:0] Rounded_Mantissa;
     reg [26:0] Extended_Mantissa;
     reg guard, round, sticky;
+
+    // Align the dividend by left-shifting its mantissa
+    // Ensure no overflow: mantissa is 23 bits with an implicit '1' bit
+    reg [47:0] aligned_dividend;
+    reg [24:0] aligned_divisor;
+    
     // Instantiate the division module
-    mantissa_divider #(24) div_module(.clk(CLK), .start(start), .done(done_div), .dividend(Mantissa_A), .divisor(Mantissa_B), .quotient(Quotient), .remainder(Remainder));
+    mantissa_divider #(24) div_module(.clk(CLK), .start(start), .done(done_div), .dividend(aligned_dividend ), .divisor(aligned_divisor ), .quotient(Quotient), .remainder(Remainder));
 
     always @(posedge CLK) begin
         // Reset all flags
@@ -131,6 +137,8 @@ module divider(A, B, C, flags, done, CLK);
                     end
                     // Calculate exponent difference
                     Tmp_Exp = Exp_A - Exp_B;
+                    aligned_dividend = {24'b0, Mantissa_A} << Tmp_Exp ;
+                    aligned_divisor  =  Mantissa_B;
                     start = 1'b1;
                     state = 2'b01; // Move to next state
                 end
@@ -142,7 +150,7 @@ module divider(A, B, C, flags, done, CLK);
 //                            // Handle the case where the quotient is zero
 //                            Result_Mantissa = Remainder;
 //                        else
-                            Result_Mantissa = Quotient;
+                            Result_Mantissa = Quotient[46:23];
                         state = 2'b10; // Move to normalization
                         start = 1'b0; 
                     end
@@ -190,8 +198,7 @@ module divider(A, B, C, flags, done, CLK);
 //                    end else begin
                         Tmp_Mantissa = Result_Mantissa[22:0];
 //                    end
-                    Tmp = {Sign, Tmp_Exp, Tmp_Mantissa};
-                    
+
                     // Handle result based on exponent range
                     if (Tmp_Exp < -149) begin
                         Tmp = {Sign, {31{1'b0}}}; // Underflow to zero

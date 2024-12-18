@@ -20,9 +20,9 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module mantissa_divider #(parameter WIDTH = 24) (
+module mantissa_divider #(parameter WIDTH = 48) (
     input [WIDTH-1:0] dividend,      // Mantissa of A
-    input [WIDTH-1:0] divisor,       // Mantissa of B
+    input [WIDTH/2-1:0] divisor,       // Mantissa of B
     output reg [WIDTH-1:0] quotient, // Quotient result
     output reg [WIDTH-1:0] remainder, // Final remainder
     output reg done,                 // Done signal

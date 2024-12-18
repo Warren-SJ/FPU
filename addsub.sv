@@ -25,6 +25,7 @@ module addsub(A, B, C, flags, done, CLK, operation);
     parameter BIT_WIDTH = 32;
     input [BIT_WIDTH - 1:0] A;
     input [BIT_WIDTH - 1:0] B;
+    input reset_n;
     output reg [BIT_WIDTH - 1:0] C;
     output reg [5:0] flags;
     output reg done;
@@ -49,6 +50,8 @@ module addsub(A, B, C, flags, done, CLK, operation);
 
     // Extract info about operands and operators
     always @(posedge CLK) begin
+    if (!ressetn)
+        C = 32'h00000000;
         a_snan      = a_flags[5];
         a_qnan      = a_flags[4];
         a_infinity  = a_flags[3];

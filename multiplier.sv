@@ -28,6 +28,7 @@ module multiplier(A, B, C, flags, done, CLK);
     output reg [BIT_WIDTH - 1:0] C;
     output reg [5:0] flags;
     output reg done;
+    input resetn;
     input CLK;
     
     reg a_snan, a_qnan, a_infinity, a_zero, a_subnormal, a_normal;
@@ -52,6 +53,8 @@ module multiplier(A, B, C, flags, done, CLK);
     );
     
     always @(posedge CLK) begin
+    if (!ressetn)
+        C = 32'h00000000;
         // Reset all flags
         a_snan      = a_flags[5];
         a_qnan      = a_flags[4];
