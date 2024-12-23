@@ -23,8 +23,8 @@
 module FPU_top(
     input [31:0] A,
     input [31:0] B,
-    output [31:0] Result,
-    input [5:0] Flags,
+    output reg [31:0] Result,
+    input reg [5:0] Flags,
     input CLK,
     input [1:0] operation,
     output reg done
@@ -35,56 +35,86 @@ module FPU_top(
     reg subtract;
     reg multiply;
     reg divide;
+    reg operation_add_sub;
     reg add_sub;
+    reg done_mult;
+    reg done_divide;
+    reg done_add_sub;
+    reg [31:0] result_mult;
+    reg [31:0] result_divide;
+    reg [31:0] result_add_sub;
+    reg [5:0] flags_add_sub;
+    reg [5:0] flags_mult;
+    reg [5:0] flags_divide;
     // Order is addition subtraction multiplication division. Pull high to enable
-    multiplier multiplier(
-         .A(A),
-         .B(B),
-         .C(Result),
-         .flags(flags),
-         .done(done),
-         .resetn(multiply),
-         .CLK(CLK),
-         .done(done)
-    );
+    multiplier multiplier (
+    .A(A),
+    .B(B),
+    .C(result_multl),
+    .flags(flags_mult),
+    .done(done_mult),
+    .resetn(multiply),
+    .CLK(CLK)
+);
+
     
-    IEEE_divider divider(
-        .num1(A),
-        .num2(B),
+    divider_top divider(
+        .A(A),
+        .B(B),
         .clk(CLK),
-        .rstn(divide),          
-        .result(C),     
-        .divisionReady(done),     // Signal to indicate division is complete
+        .resetn(divide),          
+        .C(result_divide),     
+        .done(done_divide)    // Signal to indicate division is complete
     );
     
     addsub addsub(
          .A(A),
          .B(B),
-         .C(Result),
-         .flags(flags),
-         .done(done),
+         .C(result_add_sub),
+         .flags(flags_add_sub),
+         .done(done_sdd_sub),
          .CLK(CLK),
          .reset_n(add_sub),
-         .operation(operation)
+         .operation(operation_add_sub)
         
     );
     
     always @(posedge CLK) begin
         case (operation)
             2'b00:
-                operation <= 4'b1000;
+            begin
+                one_hot_operation <= 4'b1000;
+                Result <= result_add_sub;
+                done <= done_add_sub;
+                Flags <= flags_add_sub;
+            end
             2'b01:
-                operation <= 4'b0100;
+            begin
+                one_hot_operation <= 4'b0100;
+                Result <= result_add_sub;
+                done <= done_add_sub;
+                Flags <= flags_add_sub;
+            end
             2'b10:
-                operation <= 4'b0010;
+            begin
+                one_hot_operation <= 4'b0010;
+                Result <= result_mult;
+                done <= done_mult;
+                Flags <= flags_mult;
+            end
             2'b11:
-                operation <= 4'b0001;
+            begin
+                one_hot_operation <= 4'b0001;
+                Result <= result_divide;
+                done <= done_divide;
+                Flags <= flags_divide;
+            end
          endcase
      end 
      assign add = operation[3];
      assign subtract = operation[2];
      assign multiply = operation[1];
      assign divide = operation[0];
-     assign add_sub = add . sub;
-     assign operation = add?1'b1:1'b0;
+     assign add_sub = add || subtract;
+     assign operation_add_sub = add?1'b1:1'b0;
 endmodule

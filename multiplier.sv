@@ -21,7 +21,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module multiplier(A, B, C, flags, done, CLK);
+module multiplier(A, B, C, flags, done, CLK, resetn);
     parameter BIT_WIDTH = 32;
     input [BIT_WIDTH - 1:0] A;
     input [BIT_WIDTH - 1:0] B;
@@ -53,7 +53,7 @@ module multiplier(A, B, C, flags, done, CLK);
     );
     
     always @(posedge CLK) begin
-    if (!ressetn)
+    if (!resetn)
         C = 32'h00000000;
         // Reset all flags
         a_snan      = a_flags[5];
